@@ -197,6 +197,14 @@ class DockerRuntime(ActionExecutionClient):
         use_host_network = self.config.sandbox.use_host_network
         network_mode: str | None = 'host' if use_host_network else None
 
+        # use the conversation id as the subfolder in the workspace mount path, to avoid conflicts between different conversations
+        if self.config.workspace_mount_path is not None:
+            self._workspace_mount_path = (
+                f'{self.config.workspace_mount_path}/{self.event_stream.sid}'
+            )
+        else:
+            self._workspace_mount_path = None
+
         # Initialize port mappings
         port_mapping: dict[str, list[dict[str, str]]] | None = None
         if not use_host_network:
@@ -243,17 +251,17 @@ class DockerRuntime(ActionExecutionClient):
 
         self.log('debug', f'Workspace Base: {self.config.workspace_base}')
         if (
-            self.config.workspace_mount_path is not None
+            self._workspace_mount_path is not None
             and self.config.workspace_mount_path_in_sandbox is not None
         ):
             # e.g. result would be: {"/home/user/openhands/workspace": {'bind': "/workspace", 'mode': 'rw'}}
             volumes = {
-                self.config.workspace_mount_path: {
+                self._workspace_mount_path: {
                     'bind': self.config.workspace_mount_path_in_sandbox,
                     'mode': 'rw',
                 }
             }
-            logger.debug(f'Mount dir: {self.config.workspace_mount_path}')
+            logger.debug(f'Mount dir: {self._workspace_mount_path}')
         else:
             logger.debug(
                 'Mount dir is not set, will not mount the workspace directory to the container'
